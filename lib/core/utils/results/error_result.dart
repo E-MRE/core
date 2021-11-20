@@ -1,4 +1,3 @@
-import '../../constants/result_key_constants.dart';
 import 'result.dart';
 
 class ErrorResult extends Result<ErrorResult> {
@@ -9,22 +8,22 @@ class ErrorResult extends Result<ErrorResult> {
         );
 
   factory ErrorResult.fromJson(Map<String, dynamic> json,
-      {String messageKey = ResultKeyConstants.messageKey}) {
+      {String messageKey = ResultKeys.messageKey}) {
     return ErrorResult(message: json[messageKey] ?? '');
   }
 
   @override
   ErrorResult fromJson(
     Map<String, dynamic> json, {
-    String messageKey = ResultKeyConstants.messageKey,
-    String statusKey = ResultKeyConstants.statusKey,
+    String messageKey = ResultKeys.messageKey,
+    String statusKey = ResultKeys.statusKey,
   }) =>
       ErrorResult.fromJson(json, messageKey: messageKey);
 
   @override
   Map<String, dynamic> toJson({
-    String messageKey = ResultKeyConstants.messageKey,
-    String statusKey = ResultKeyConstants.statusKey,
+    String messageKey = ResultKeys.messageKey,
+    String statusKey = ResultKeys.statusKey,
   }) {
     return {
       messageKey: message,

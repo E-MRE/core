@@ -1,4 +1,3 @@
-import '../../constants/result_key_constants.dart';
 import 'result.dart';
 
 abstract class DataResult<TData> extends Result<DataResult<TData>> {
@@ -15,15 +14,15 @@ abstract class DataResult<TData> extends Result<DataResult<TData>> {
 
   @override
   Map<String, dynamic> toJson({
-    String messageKey = ResultKeyConstants.messageKey,
-    String dataKey = ResultKeyConstants.dataKey,
-    String statusKey = ResultKeyConstants.statusKey,
+    String messageKey = ResultKeys.messageKey,
+    String dataKey = ResultKeys.dataKey,
+    String statusKey = ResultKeys.statusKey,
   });
 
   @override
   DataResult<TData> fromJson(
     Map<String, dynamic> json, {
-    String messageKey = ResultKeyConstants.messageKey,
-    String dataKey = ResultKeyConstants.dataKey,
+    String messageKey = ResultKeys.messageKey,
+    String dataKey = ResultKeys.dataKey,
   });
 }
