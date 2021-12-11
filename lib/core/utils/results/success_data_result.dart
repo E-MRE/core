@@ -7,7 +7,7 @@ class SuccessDataResult<TData> extends DataResult<TData> {
     String message = '',
   }) : super(
           data: data,
-          status: true,
+          success: true,
           message: message,
         );
 

@@ -4,7 +4,7 @@ class SuccessResult extends Result<SuccessResult> {
   SuccessResult({String message = ''})
       : super(
           message: message,
-          status: true,
+          success: true,
         );
 
   factory SuccessResult.fromJson(Map<String, dynamic> json,

@@ -4,7 +4,7 @@ class ErrorResult extends Result<ErrorResult> {
   ErrorResult({String message = ''})
       : super(
           message: message,
-          status: false,
+          success: false,
         );
 
   factory ErrorResult.fromJson(Map<String, dynamic> json,
