@@ -1,10 +1,10 @@
 abstract class Result<T> {
   final String message;
-  final bool status;
+  final bool success;
 
   Result({
     this.message = '',
-    required this.status,
+    required this.success,
   });
 
   Map<String, dynamic> toJson({

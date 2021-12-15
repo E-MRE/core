@@ -1,14 +1,14 @@
 import 'result.dart';
 
 abstract class DataResult<TData> extends Result<DataResult<TData>> {
-  final TData data;
+  final TData? data;
 
   DataResult({
-    required this.data,
-    required bool status,
+    this.data,
+    required bool success,
     String message = '',
   }) : super(
-          status: status,
+          success: success,
           message: message,
         );
 

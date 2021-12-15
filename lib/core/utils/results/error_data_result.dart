@@ -3,11 +3,11 @@ import 'result.dart';
 
 class ErrorDataResult<TData> extends DataResult<TData> {
   ErrorDataResult({
-    required TData data,
-    String message = '',
+    TData? data,
+    required String message,
   }) : super(
           data: data,
-          status: false,
+          success: false,
           message: message,
         );
 
