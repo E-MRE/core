@@ -1,3 +1,7 @@
+import '../../enums/custom_duration.dart';
+import '../models/api_response.dart';
+import '../models/api_response_model.dart';
+import '../../utils/mixins/json_entity_converter_mixin.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:io';
@@ -10,37 +14,125 @@ import '../../utils/results/result.dart';
 import '../../utils/results/data_result.dart';
 import '../../utils/results/success_data_result.dart';
 import '../../utils/results/success_result.dart';
-import '../models/base_entitiy_model.dart';
 
-part '../../utils/entity_model_parser.dart';
+class HttpRemoteDataManager
+    with JsonEntityConverterMixin
+    implements RemoteDataService {
+  static HttpRemoteDataManager? _instance;
 
-class HttpRemoteDataManager implements RemoteDataService {
-  HttpRemoteDataManager() : _client = http.Client();
+  static HttpRemoteDataManager getInstance(
+      {String? baseUrl, Map<String, String>? header, CustomDuration? timeout}) {
+    _instance ??= HttpRemoteDataManager._init(
+      baseUrl: baseUrl,
+      header: header,
+      timeout: timeout,
+    );
+    return _instance!;
+  }
+
+  HttpRemoteDataManager._init({
+    String? baseUrl,
+    Map<String, String>? header,
+    CustomDuration? timeout,
+  })  : _baseUrl = baseUrl ?? 'https://jsonplaceholder.typicode.com/',
+        _header = header ?? {'Content-type': 'application/json; charset=UTF-8'},
+        _timeout = timeout ?? CustomDuration.normal,
+        _client = http.Client();
 
   final http.Client _client;
 
-  @override
-  Map<String, String> get baseHeader => {
-        'Content-type': 'application/json; charset=UTF-8',
-      };
+  String _baseUrl;
+  Map<String, String> _header;
+  CustomDuration _timeout;
 
   @override
-  String get baseUrl => 'https://jsonplaceholder.typicode.com/';
+  Map<String, String> get baseHeader => _header;
 
   @override
-  Future<DataResult<T>> get<T extends BaseEntityModel>({
+  String get baseUrl => _baseUrl;
+
+  @override
+  Duration get getTimeout => _timeout.rawValue();
+
+  @override
+  RemoteDataService setUrl(String url) {
+    _baseUrl = url;
+    return _instance ?? HttpRemoteDataManager._init();
+  }
+
+  @override
+  RemoteDataService setHeader(Map<String, String> header) {
+    _header = header;
+    return _instance ?? HttpRemoteDataManager._init();
+  }
+
+  @override
+  RemoteDataService setTimeout(CustomDuration timeout) {
+    _timeout = timeout;
+    return _instance ?? HttpRemoteDataManager._init();
+  }
+
+  @override
+  RemoteDataService addBearerTokenToHeader(String token) {
+    _header['Authorization'] = 'Bearer $token';
+    return _instance ?? HttpRemoteDataManager._init();
+  }
+
+  @override
+  RemoteDataService addToHeader(String key, String value) {
+    _header[key] = value;
+    return _instance ?? HttpRemoteDataManager._init();
+  }
+
+  @override
+  Future<DataResult<TReturn>> getData<TReturn, TModel>({
     required String endpoint,
-    required T parseModel,
+    required TModel parseModel,
     String? query,
     Map<String, String>? headers,
+    CustomDuration? timeout,
   }) async {
-    var result =
-        await _baseGet(endpoint: endpoint, query: query, headers: headers);
+    var result = await _baseGet(
+      endpoint: endpoint,
+      query: query,
+      headers: headers,
+      timeout: timeout,
+    );
 
     return result.success
-        ? _EntityModelParser.parseModel<T, T>(
-            parseModel, jsonDecode(result.data?.body ?? '{}'))
+        ? convertEntity<TReturn, TModel>(
+            parseModel, jsonDecode(result.data?.body ?? emptyJson))
         : ErrorDataResult(message: result.message);
+  }
+
+  @override
+  Future<ApiResponse<TReturn, TModel>> getDataByApiResponse<TReturn, TModel>({
+    required String endpoint,
+    TModel? parseModel,
+    String? query,
+    Map<String, String>? headers,
+    ApiResponse<TReturn, TModel>? apiResponse,
+    CustomDuration? timeout,
+  }) async {
+    var result = await _baseGet(
+      endpoint: endpoint,
+      query: query,
+      headers: headers,
+      timeout: timeout,
+    );
+
+    if (!result.success) {
+      apiResponse?.message = result.message;
+      apiResponse?.success = false;
+      return apiResponse ??
+          ApiResponseModel(message: result.message, success: false);
+    }
+
+    return convertApiResponse<TReturn, TModel>(
+      jsonBody: result.data?.body,
+      apiResponse: apiResponse ?? ApiResponseModel<TReturn, TModel>(),
+      parseModel: parseModel,
+    );
   }
 
   @override
@@ -48,12 +140,17 @@ class HttpRemoteDataManager implements RemoteDataService {
     required String endpoint,
     String? query,
     Map<String, String>? headers,
+    CustomDuration? timeout,
   }) async {
-    var result =
-        await _baseGet(endpoint: endpoint, query: query, headers: headers);
+    var result = await _baseGet(
+      endpoint: endpoint,
+      query: query,
+      headers: headers,
+      timeout: timeout,
+    );
 
     return result.success
-        ? SuccessDataResult(data: jsonDecode(result.data?.body ?? '{}'))
+        ? SuccessDataResult(data: jsonDecode(result.data?.body ?? emptyJson))
         : ErrorDataResult(message: result.message);
   }
 
@@ -62,9 +159,14 @@ class HttpRemoteDataManager implements RemoteDataService {
     required String endpoint,
     required body,
     Map<String, String>? headers,
+    CustomDuration? timeout,
   }) async {
-    var result =
-        await _basePost(endpoint: endpoint, body: body, headers: headers);
+    var result = await _basePost(
+      endpoint: endpoint,
+      body: body,
+      headers: headers,
+      timeout: timeout,
+    );
 
     return result.success
         ? SuccessResult()
@@ -74,47 +176,90 @@ class HttpRemoteDataManager implements RemoteDataService {
   @override
   Future<DataResult<String>> postByResponseJson({
     required String endpoint,
-    required dynamic body,
+    required Object body,
+    bool isJsonEncode = true,
     Map<String, String>? headers,
+    CustomDuration? timeout,
   }) async {
     var result = await _basePost(
       endpoint: endpoint,
-      body: jsonDecode(body),
+      body: isJsonEncode ? jsonEncode(body) : body,
       headers: headers,
+      timeout: timeout,
     );
 
     return result.success
-        ? SuccessDataResult(data: jsonDecode(result.data?.body ?? '{}'))
+        ? SuccessDataResult(data: jsonDecode(result.data?.body ?? emptyJson))
         : ErrorDataResult(message: result.message);
   }
 
   @override
-  Future<DataResult<TReturn>> postByResponseData<TReturn,
-      TData extends BaseEntityModel, TParse extends BaseEntityModel>({
+  Future<DataResult<TReturn>> postByData<TReturn, TParse>({
     required String endpoint,
-    required TData body,
+    required Object body,
+    bool isJsonEncode = true,
     required TParse parseModel,
     Map<String, String>? headers,
+    ApiResponse<TReturn, TParse>? apiResponse,
+    CustomDuration? timeout,
   }) async {
     var result = await _basePost(
-        endpoint: endpoint, body: body.toJson(), headers: headers);
+      endpoint: endpoint,
+      body: isJsonEncode ? jsonEncode(body) : body,
+      headers: headers,
+      timeout: timeout,
+    );
 
     return result.success
-        ? _EntityModelParser.parseModel<TReturn, TParse>(
-            parseModel, body.toJson())
+        ? convertEntity<TReturn, TParse>(
+            parseModel, jsonDecode(result.data?.body ?? emptyJson))
         : ErrorDataResult(message: result.message);
+  }
+
+  @override
+  Future<ApiResponse<TReturn, TParse>> postByResponseData<TReturn, TParse>({
+    required String endpoint,
+    required Object body,
+    bool isJsonEncode = true,
+    required TParse parseModel,
+    Map<String, String>? headers,
+    ApiResponse<TReturn, TParse>? apiResponse,
+    CustomDuration? timeout,
+  }) async {
+    var result = await _basePost(
+      endpoint: endpoint,
+      body: isJsonEncode ? jsonEncode(body) : body,
+      headers: headers,
+      timeout: timeout,
+    );
+
+    if (!result.success) {
+      apiResponse?.message = result.message;
+      apiResponse?.success = false;
+      return apiResponse ??
+          ApiResponseModel(message: result.message, success: false);
+    }
+
+    return convertApiResponse<TReturn, TParse>(
+      jsonBody: result.data?.body,
+      apiResponse: apiResponse ?? ApiResponseModel<TReturn, TParse>(),
+      parseModel: parseModel,
+    );
   }
 
   Future<DataResult<http.Response>> _baseGet({
     required String endpoint,
     String? query,
     Map<String, String>? headers,
+    CustomDuration? timeout,
   }) async {
     try {
-      var response = await _client.get(
-        Uri.parse(_getUrl(endpoint, query)),
-        headers: headers ?? baseHeader,
-      );
+      var response = await _client
+          .get(
+            Uri.parse(_getUrl(endpoint, query)),
+            headers: headers ?? baseHeader,
+          )
+          .timeout(timeout?.rawValue() ?? getTimeout);
 
       return response.statusCode == HttpStatus.ok
           ? SuccessDataResult<http.Response>(data: response)
@@ -128,13 +273,16 @@ class HttpRemoteDataManager implements RemoteDataService {
     required String endpoint,
     Object? body,
     Map<String, String>? headers,
+    CustomDuration? timeout,
   }) async {
     try {
-      var response = await _client.post(
-        Uri.parse(_getUrl(endpoint, null)),
-        headers: headers ?? baseHeader,
-        body: body,
-      );
+      var response = await _client
+          .post(
+            Uri.parse(_getUrl(endpoint, null)),
+            headers: headers ?? baseHeader,
+            body: body,
+          )
+          .timeout(timeout?.rawValue() ?? getTimeout);
 
       return response.statusCode == HttpStatus.ok
           ? SuccessDataResult(data: response)
